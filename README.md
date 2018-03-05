@@ -5,12 +5,20 @@ GenHap is a novel computational method based on Genetic Algorithms for haplotype
 GenHap tackles the computational complexity of the haplotyping problem by exploiting Genetic Algorithms to solve the weighted Minimum Error Correction problem (wMEC), a variant of the well-known MEC problem.
 GenHap can efficiently solve large instances of the wMEC problem, yielding optimal solutions by means of a global search process, without any a priori hypothesis about the sequencing error distribution in reads. Moreover, GenHap is capable of processing datasets composed of both long reads and coverages up to 60x on personal computers.
 
-  1. [Compilation](#comp)
-  2. [Input parameters](#inp)
-  3. [Data](#data)
-  4. [License](#lic)
-  5. [Contacts](#cont)
-  
+  1. [Reference](#ref) 
+  2. [Compilation](#comp) 
+  3. [Input parameters](#inp)
+  4. [Data](#data)
+  5. [License](#lic)
+  6. [Contacts](#cont)
+
+
+## <a name="ref"></a>Reference ##
+
+A detailed description of GenHap, as well as a complete experimental comparison with an efficient state-of-the-art algorithm for haplotype phasing by using the dataset described below ([Data](#data)), can be found in:
+
+Tangherloni A., Spolaor S., Rundo L., Nobile M.S., Cazzaniga P., Mauri G., Liò P., Merelli I., and Besozzi D.: "GenHap: A Novel Computational Method Based on Genetic Algorithms for Haplotype Assembly", _submitted_.
+
 ## <a name="comp"></a>Compilation ##
 
 GenHap has been developed and tested on Ubuntu Linux but should work also on MacOS X.
