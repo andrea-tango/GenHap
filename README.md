@@ -54,7 +54,7 @@ For example, GenHap can be executed with the following command:
     mpiexec -np 4 ./GenHap -i Models/Freq_100/10000SNPs_60x/PacBio/Model_0.wif -o Output/Freq_100/10000SNPs_60x/PacBio
 
 which will save the estimated haplotypes solution in the file `haplotypes` into the folder Output/Freq_100/10000SNPs_60x/PacBio.
-In this case, `GenHap` exploits 4 core to perform the required optimizations.
+In this case, `GenHap` exploits 4 cores to perform the required optimizations.
 
 By running `GenHap` without specifying any parameter, all the above parameters will be listed.
 
