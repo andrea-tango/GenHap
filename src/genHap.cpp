@@ -126,7 +126,7 @@ void saveHaplotypes(string pathOut, string name, int num, vector<vector<int> > &
 			string s = "";
 			for(int j=0; j < length; j++)
 			{
-				if(haplotypes[idxO][j] != '-')
+				if(newSubHap[idxN][j] == '-')
 					s += haplotypes[idxO][j];
 				else
 					s += newSubHap[idxN][j];
