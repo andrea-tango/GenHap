@@ -634,7 +634,7 @@ int main(int argc, char* argv[])
 		if(argc == 1)
 		{
 			cout << "************************************************************************************************************************\n";
-			cout << "GenHap: Genetic Algorithm for Haplotyping parameters" << endl;
+			cout << "GenHap: Genetic Algorithm for Haplotype Assembly, parameters" << endl;
 			cout << " * -i: path to the input wif file (mandatory)" << endl;
 			cout << " * -o: output folder (optional, default value: " << pathOutput << ")" <<endl;
 			cout << " * -n: file name containing the estimated haplotypes (optional, default value " << name << ")" << endl;
@@ -668,7 +668,7 @@ int main(int argc, char* argv[])
 
 		// printing parameters
 		cout << "************************************************************************************************************************\n";
-		cout << "GenHap: Genetic Algorithm for Haplotyping ... \n" << endl;
+		cout << "GenHap: Genetic Algorithm for Haplotype Assembly\n" << endl;
 		cout << "* Using " << pathInput  << " as input wif file" << endl;
 		cout << "* Using " << pathOutput << " as output folder" << endl;
 		cout << "* Using " << name       << " as file name containing the estimated haplotypes" << endl;

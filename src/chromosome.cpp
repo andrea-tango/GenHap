@@ -184,8 +184,11 @@ void Chromosome::calculate_n0_n1(vector<vector<int> > &C, vector<vector<int> > &
 			}
 			else
 			{
-				idx = indexC[i];
-				N1[j] += M_weight[idx][j];			
+				if(C[i][j] == 1)
+				{
+					idx = indexC[i];
+					N1[j] += M_weight[idx][j];	
+				}		
 			}
 		}
 	}
