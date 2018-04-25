@@ -305,8 +305,6 @@ void GeneticAlgorithm::startGA(string pathOutput, vector<vector<int> > &MIn, vec
 			int num1 = 0;
 			for(int i=0; i < C2.size(); i++)
 			{
-				int num0 = 0;
-				int num1 = 0;
 				if(C2[i][j] == 0)
 				{
 					indexC2 = best.getIndexC2();
