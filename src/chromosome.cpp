@@ -152,14 +152,14 @@ double Chromosome::errorFunction(int n, int num0, int num1, vector<vector<int> >
 	{
 		for(int j=0; j < C1.size(); j++)
 		{
-			error1 += distanceFragment(listIndex, C1[j], h1, indexC1[j]);
+			error1 += distanceFragment(C1[j], h1);
 		}
 	}
 	if(num1)
 	{
 		for(int j=0; j < C2.size(); j++)
 		{
-			error2 += distanceFragment(listIndex, C2[j], h2, indexC2[j]);
+			error2 += distanceFragment(C2[j], h2);
 		}
 	}
 
@@ -175,7 +175,7 @@ void Chromosome::calculate_n0_n1(vector<vector<int> > &C, vector<vector<int> > &
 
 	for(int i=0; i < m; i++)
 	{
-		for(int j=0; j < listIndex[indexC[i]][1]; j++)
+		for(int j=listIndex[indexC[i]][0]; j < listIndex[indexC[i]][1]; j++)
 		{
 			if(C[i][j] == 0)
 			{
@@ -184,11 +184,8 @@ void Chromosome::calculate_n0_n1(vector<vector<int> > &C, vector<vector<int> > &
 			}
 			else
 			{
-				if(C[i][j] == 1)
-				{
-					idx = indexC[i];
-					N1[j] += M_weight[idx][j];	
-				}		
+				idx = indexC[i];
+				N1[j] += M_weight[idx][j];		
 			}
 		}
 	}
@@ -222,7 +219,7 @@ vector<int> Chromosome::calculate_h(vector<int> &N0, vector<int> &N1)
 	return h;
 }
 
-int Chromosome::distanceFragment(vector<vector<int> > &listIndex, vector<int> &f1, vector<int> &f2, int j)
+int Chromosome::distanceFragment(vector<int> &f1, vector<int> &f2)
 {
 	int sumErr = 0;
 

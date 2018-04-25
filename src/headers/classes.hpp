@@ -65,7 +65,7 @@ private:
 
 	vector<int> calculate_h(vector<int> &N0, vector<int> &N1);
 
-	int distanceFragment(vector<vector<int> > &listIndex, vector<int> &f1, vector<int> &f2, int j);
+	int distanceFragment(vector<int> &f1, vector<int> &f2);
 	int singleDistance(int x, int y);
 };
 

@@ -178,7 +178,6 @@ void Reader::readFromWif(string pathIn, string pathOut, int gamma, bool saveMatr
 		listRunLen.push_back(tmp);
 	}
 
-
 	vector<int> listIndex;
 
 	for(int i=0; i < matrix.size(); i+=gamma)
