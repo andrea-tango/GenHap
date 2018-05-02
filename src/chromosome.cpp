@@ -175,7 +175,7 @@ void Chromosome::calculate_n0_n1(vector<vector<int> > &C, vector<vector<int> > &
 
 	for(int i=0; i < m; i++)
 	{
-		for(int j=listIndex[indexC[i]][0]; j < listIndex[indexC[i]][1]; j++)
+		for(int j=0; j < listIndex[indexC[i]][1]; j++)
 		{
 			if(C[i][j] == 0)
 			{
