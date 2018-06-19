@@ -49,11 +49,12 @@ Optional parameters could be provided:
 - `-x` to enable or disable the masking of the ambiguous positions in the output haplotypes with a X;
 - `-p` to specify the file containing the GA settings.
 
+Notice that when `-g=0`, for each haplotype block `B` GenHap automatically sets `-g` equal to the mean coverage of `B` to partition the reads.
 For example, GenHap can be executed with the following command:
 
     mpiexec -np 4 ./GenHap -i Models/Freq_100/10000SNPs_60x/PacBio/Model_0.wif -o Output/Freq_100/10000SNPs_60x/PacBio
 
-which will save the estimated haplotypes solution in the file `haplotypes` into the folder Output/Freq_100/10000SNPs_60x/PacBio.
+which will save the estimated haplotypes solution in files `haplotypes` (one file for each haplotype block) into the folder Output/Freq_100/10000SNPs_60x/PacBio.
 In this case, `GenHap` exploits 4 cores to perform the required optimizations.
 
 By running `GenHap` without specifying any parameter, all the above parameters will be listed.
@@ -81,6 +82,8 @@ In particular, we considered the Roche/454 genome sequencer (Roche AG, Basel, Sw
 All the tested models can be downloaded at <https://github.com/andrea-tango/GenHap/blob/master/Models.zip>.
 
 For each model, we provide a txt file containing the correct haplotypes (i.e., the ground truth).
+
+Moreover, we tested GenHap on two real instances: (i) the chromosome 22 of the individual NA12878 obtained starting from high-quality SNP calls and sequencing data made publicly available by the Genome in a Bottle (GIAB) Consortium; (ii) the chromosome 22 obtained starting from PacBio data.
 
 ## <a name="lic"></a>License ##
 
