@@ -45,24 +45,25 @@ const int DIETAG  = 1;
 const int END_S  = 11;
 
 
-int slave(int rank, string pathOutput, bool verbose, bool saving, string settings);
+int slave(int rank, string pathOutput, bool verbose, bool saving, string settings, bool allHeterozygous);
 void master(vector<vector<int> > &matrix, vector<vector<int> > &matrixWeight,
 	vector<vector<int> > &listRunLen, vector<int> &listIndex, int size);
 
 void findMinMax(int start, int end, vector<vector<int> > &v, int &min, int &max);
-void saveHaplotypes(string pathOut, string name, int num, vector<vector<int> > &matrix, bool ambiguous);
+void saveHaplotypes(string pathOut, string name, int num, vector<vector<int> > &matrix, bool ambiguous, int block, bool allHeterozygous);
 int calculateSimilarity(string oldSubHap, vector<string> newSubHap, int length);
 
-void saveHaplotypes(string pathOut, string name, int num, vector<vector<int> > &matrix, bool ambiguous)
+void saveHaplotypes(string pathOut, string name, int num, vector<vector<int> > &matrix, bool ambiguous, int block, bool allHeterozygous)
 {
 	vector<vector<string> > subHaplotypes;
+	vector<vector<int> > finalHomozygous;
 
 	string line, path;
 	int length;
-	
-	for(int i=0; i < num; i++)
+
+	if(num == 0)
 	{
-		path = pathOut+slash+"output"+slash+"optimization"+to_string(i)+slash+"haplotypes";
+		path = pathOut+slash+"block"+to_string(block)+slash+"optimization"+to_string(0)+slash+"haplotypes";
 		ifstream infile(path.c_str());
 		vector<string> sublista;
 		while (getline(infile, line))
@@ -74,6 +75,25 @@ void saveHaplotypes(string pathOut, string name, int num, vector<vector<int> > &
 			}
 		}
 		subHaplotypes.push_back(sublista);
+
+	}
+	else
+	{
+		for(int i=0; i < num; i++)
+		{
+			path = pathOut+slash+"block"+to_string(block)+slash+"optimization"+to_string(i)+slash+"haplotypes";
+			ifstream infile(path.c_str());
+			vector<string> sublista;
+			while (getline(infile, line))
+			{
+				istringstream buf(line);
+				for(string token; getline(buf, token, ' '); )
+				{
+					sublista.push_back(token);
+				}
+			}
+			subHaplotypes.push_back(sublista);
+		}
 	}
 
 	vector<string> haplotypes;
@@ -134,6 +154,67 @@ void saveHaplotypes(string pathOut, string name, int num, vector<vector<int> > &
 
 			haplotypes[idxO] = s;			
 		}	
+	}
+
+	if(allHeterozygous)
+	{
+		for(int i=0; i < num; i++)
+		{
+			vector<string> reads;
+			length = subHaplotypes[i][0].length();	
+
+			reads.push_back(subHaplotypes[i][0]);
+			reads.push_back(subHaplotypes[i][1]);
+
+			vector<vector<int> > homozygousSites;
+			path = pathOut+slash+"block"+to_string(block)+slash+"optimization"+to_string(i)+slash+"homozygousSites";
+			ifstream infile(path.c_str());
+			while (getline(infile, line))
+			{
+				vector<int> homozygous;
+				istringstream buf(line);
+				for(string token; getline(buf, token, ' '); )
+				{
+					homozygous.push_back((int) strtod(token.c_str(), NULL));
+				}
+				homozygousSites.push_back(homozygous);
+			}
+
+			int index = calculateSimilarity(haplotypes[0], reads, length);
+
+			for(int k=0; k < homozygousSites.size(); k++)
+			{
+				vector<int> values;
+				values.push_back(homozygousSites[k][0]);
+				
+				if (index==0)
+				{
+					values.push_back(homozygousSites[k][1]);
+					values.push_back(homozygousSites[k][2]);
+				}
+				else
+				{
+					values.push_back(homozygousSites[k][2]);
+					values.push_back(homozygousSites[k][1]);
+				}
+
+				bool already = false;
+				for(int k1=0; k1 < finalHomozygous.size(); k1++)
+				{	
+					if(finalHomozygous[k1][0] == values[0])
+					{
+						already = true;
+						break;
+					}
+					
+				}
+				if(!already)
+				{	
+					finalHomozygous.push_back(values);
+					
+				}
+			}
+		}
 	}
 
 
@@ -221,8 +302,97 @@ void saveHaplotypes(string pathOut, string name, int num, vector<vector<int> > &
 		}
 	}
 
+	for(int i=0; i < haplotypes[1].size(); i++)
+	{
+		if(haplotypes[0][i]!='-' && haplotypes[1][i]=='-')
+		{
+			if(!ambiguous)
+			{
+				if(allHeterozygous)
+				{
+					if(haplotypes[0][i]=='0')
+						haplotypes[1][i]= '1';
+					else
+						haplotypes[1][i]= '0';
+				}
+				else
+					haplotypes[1][i]= haplotypes[0][i];
+
+			}
+			else
+			{
+				haplotypes[1][i]='X';
+			}
+		}
+
+		else
+		{
+			if(haplotypes[0][i]=='-' && haplotypes[1][i]!='-')
+			{
+				if(!ambiguous)
+				{
+					if(allHeterozygous)
+					{
+						if(haplotypes[1][i]=='0')
+							haplotypes[0][i]= '1';
+						else
+							haplotypes[0][i]= '0';
+					}
+					else
+						haplotypes[0][i]= haplotypes[1][i];
+
+				}
+				else
+				{
+					haplotypes[0][i]='X';
+				}
+			}
+		}
+	}
+
+	if(allHeterozygous)
+	{
+		for(int j=0; j < finalHomozygous.size(); j++)
+		{
+			int idx = finalHomozygous[j][0];
+
+			if(haplotypes[0][idx]!='X' || haplotypes[1][idx]!='X')
+			{
+				if(haplotypes[0][idx]=='0' && haplotypes[1][idx]=='0')
+				{
+					if(finalHomozygous[j][1] == 0)
+					{
+						haplotypes[0][idx]='0';
+						haplotypes[1][idx]='1';
+					}
+					else
+					{
+						haplotypes[0][idx]='1';
+						haplotypes[1][idx]='0';
+					}
+				}
+				else
+				{
+					if(haplotypes[0][idx]=='1' && haplotypes[1][idx]=='1')
+					{
+						if(finalHomozygous[j][1] == 1)
+						{
+							haplotypes[0][idx]='1';
+							haplotypes[1][idx]='0';
+						}
+						else
+						{
+							haplotypes[0][idx]='0';
+							haplotypes[1][idx]='1';
+						}
+					}
+				}	
+			}
+		}
+	}
+
 	FILE * fl;
-	string file = pathOut+slash+name;
+	string file = pathOut+slash+name+to_string(block);
 	fl=fopen(file.c_str(), "w");
 
 	if( fl==NULL )
@@ -273,225 +443,294 @@ void findMinMax(int start, int end, vector<vector<int> > &v, int &min, int &max)
 
 // Master process that orchestrates the slave processes
 void master(vector<vector<int> > &matrix, vector<vector<int> > &matrixWeight,
-	vector<vector<int> > &listRunLen, vector<int> &listIndex, int size)
+	vector<vector<int> > &listRunLen, vector<vector<int> > &listIndex, int size) 
 {
 	MPI_Status status;
 	int min, max, numRow, numCol;
-
 	int shape = matrix[0].size();
-
 	vector<int> v;
 
-	if(listIndex.size() < size)
+	for(int block=0; block < listIndex.size(); block++)
 	{
-		for(int i=1; i < listIndex.size(); i++)
+		if(listIndex[block].size() < size)
 		{
-			int start = listIndex[i-1];
-			int end   = listIndex[i];
 
-			numRow = end - start;
-			findMinMax(start, end, listRunLen, min, max);
-			numCol = max - min;
-
-			int idx = i-1;
-			MPI_Send(&idx, 1, MPI_INT, i, WORKTAG, MPI_COMM_WORLD);
-			MPI_Send(&numRow, 1, MPI_INT, i, WORKTAG, MPI_COMM_WORLD);
-			MPI_Send(&numCol, 1, MPI_INT, i, WORKTAG, MPI_COMM_WORLD);
-
-			for(int j=start; j < end; j++)
+			if(listIndex[block].size() == 1)
 			{
-				vector<int> v(numCol);
-				for(int k=min; k < max; k++)
+				int start = listIndex[block][0];
+				int end   = listIndex[block][0]+1;
+
+				numRow = end - start;
+				findMinMax(start, end, listRunLen, min, max);
+				numCol = max - min;
+
+				int idx = 0;
+				MPI_Send(&block, 1, MPI_INT, 1, WORKTAG, MPI_COMM_WORLD);
+				MPI_Send(&idx, 1, MPI_INT, 1, WORKTAG, MPI_COMM_WORLD);
+				MPI_Send(&numRow, 1, MPI_INT, 1, WORKTAG, MPI_COMM_WORLD);
+				MPI_Send(&numCol, 1, MPI_INT, 1, WORKTAG, MPI_COMM_WORLD);
+
+				for(int j=start; j < end; j++)
 				{
-					v[k-min] = matrix[j][k];
+					vector<int> v(numCol);
+					for(int k=min; k < max; k++)
+					{
+						v[k-min] = matrix[j][k];
+					}
+
+					if(j != end-1)
+						MPI_Send(&v[0], v.size(), MPI_INT, 1, WORKTAG, MPI_COMM_WORLD);
+					else
+						MPI_Send(&v[0], v.size(), MPI_INT, 1, END_S, MPI_COMM_WORLD);
 				}
 
-				if(j != end-1)
-					MPI_Send(&v[0], v.size(), MPI_INT, i, WORKTAG, MPI_COMM_WORLD);
-				else
-					MPI_Send(&v[0], v.size(), MPI_INT, i, END_S, MPI_COMM_WORLD);
-			}
-
-			for(int j=start; j < end; j++)
-			{
-				vector<int> v(numCol);
-				for(int k=min; k < max; k++)
+				for(int j=start; j < end; j++)
 				{
-					v[k-min] = matrixWeight[j][k];
+					vector<int> v(numCol);
+					for(int k=min; k < max; k++)
+					{
+						v[k-min] = matrixWeight[j][k];
+					}
+
+					if(j != end-1)
+						MPI_Send(&v[0], v.size(), MPI_INT, 1, WORKTAG, MPI_COMM_WORLD);
+					else
+						MPI_Send(&v[0], v.size(), MPI_INT, 1, END_S, MPI_COMM_WORLD);
 				}
 
-				if(j != end-1)
-					MPI_Send(&v[0], v.size(), MPI_INT, i, WORKTAG, MPI_COMM_WORLD);
-				else
-					MPI_Send(&v[0], v.size(), MPI_INT, i, END_S, MPI_COMM_WORLD);
-			}
+				for(int j=start; j < end; j++)
+				{
+					vector<int> v(2);
+					v[0] = listRunLen[j][0] - min;
+					v[1] = listRunLen[j][1] - min;
 
-			for(int j=start; j < end; j++)
+					if(j != end-1)
+						MPI_Send(&v[0], v.size(), MPI_INT, 1, WORKTAG, MPI_COMM_WORLD);
+					else
+						MPI_Send(&v[0], v.size(), MPI_INT, 1, END_S, MPI_COMM_WORLD);
+
+				}
+
+				MPI_Send(&min, 1, MPI_INT, 1, WORKTAG, MPI_COMM_WORLD);
+				MPI_Send(&shape, 1, MPI_INT, 1, WORKTAG, MPI_COMM_WORLD);
+
+			}
+			else
 			{
-				vector<int> v(2);
-				v[0] = listRunLen[j][0] - min;
-				v[1] = listRunLen[j][1] - min;
 
-				if(j != end-1)
-					MPI_Send(&v[0], v.size(), MPI_INT, i, WORKTAG, MPI_COMM_WORLD);
-				else
-					MPI_Send(&v[0], v.size(), MPI_INT, i, END_S, MPI_COMM_WORLD);
+				for(int i=1; i < listIndex[block].size(); i++)
+				{
+					int start = listIndex[block][i-1];
+					int end   = listIndex[block][i];
 
+					numRow = end - start;
+					findMinMax(start, end, listRunLen, min, max);
+					numCol = max - min;
+
+					int idx = i-1;
+					MPI_Send(&block, 1, MPI_INT, i, WORKTAG, MPI_COMM_WORLD);
+					MPI_Send(&idx, 1, MPI_INT, i, WORKTAG, MPI_COMM_WORLD);
+					MPI_Send(&numRow, 1, MPI_INT, i, WORKTAG, MPI_COMM_WORLD);
+					MPI_Send(&numCol, 1, MPI_INT, i, WORKTAG, MPI_COMM_WORLD);
+
+					for(int j=start; j < end; j++)
+					{
+						vector<int> v(numCol);
+						for(int k=min; k < max; k++)
+						{
+							v[k-min] = matrix[j][k];
+						}
+
+						if(j != end-1)
+							MPI_Send(&v[0], v.size(), MPI_INT, i, WORKTAG, MPI_COMM_WORLD);
+						else
+							MPI_Send(&v[0], v.size(), MPI_INT, i, END_S, MPI_COMM_WORLD);
+					}
+
+					for(int j=start; j < end; j++)
+					{
+						vector<int> v(numCol);
+						for(int k=min; k < max; k++)
+						{
+							v[k-min] = matrixWeight[j][k];
+						}
+
+						if(j != end-1)
+							MPI_Send(&v[0], v.size(), MPI_INT, i, WORKTAG, MPI_COMM_WORLD);
+						else
+							MPI_Send(&v[0], v.size(), MPI_INT, i, END_S, MPI_COMM_WORLD);
+					}
+
+					for(int j=start; j < end; j++)
+					{
+						vector<int> v(2);
+						v[0] = listRunLen[j][0] - min;
+						v[1] = listRunLen[j][1] - min;
+
+						if(j != end-1)
+							MPI_Send(&v[0], v.size(), MPI_INT, i, WORKTAG, MPI_COMM_WORLD);
+						else
+							MPI_Send(&v[0], v.size(), MPI_INT, i, END_S, MPI_COMM_WORLD);
+
+					}
+
+					MPI_Send(&min, 1, MPI_INT, i, WORKTAG, MPI_COMM_WORLD);
+					MPI_Send(&shape, 1, MPI_INT, i, WORKTAG, MPI_COMM_WORLD);
+				}
 			}
 
-			MPI_Send(&min, 1, MPI_INT, i, WORKTAG, MPI_COMM_WORLD);
-			MPI_Send(&shape, 1, MPI_INT, i, WORKTAG, MPI_COMM_WORLD);
 		}
+		else
+		{
 
+			for(int i=1; i < size; i++)
+			{
+				int start = listIndex[block][i-1];
+				int end   = listIndex[block][i];
+
+				numRow = end - start;
+				findMinMax(start, end, listRunLen, min, max);
+				numCol = max - min;
+
+				int idx = i-1;
+				MPI_Send(&block, 1, MPI_INT, i, WORKTAG, MPI_COMM_WORLD);
+				MPI_Send(&idx, 1, MPI_INT, i, WORKTAG, MPI_COMM_WORLD);
+				MPI_Send(&numRow, 1, MPI_INT, i, WORKTAG, MPI_COMM_WORLD);
+				MPI_Send(&numCol, 1, MPI_INT, i, WORKTAG, MPI_COMM_WORLD);
+
+				for(int j=start; j < end; j++)
+				{
+					vector<int> v(numCol);
+					for(int k=min; k < max; k++)
+					{
+						v[k-min] = matrix[j][k];
+					}
+
+					if(j != end-1)
+						MPI_Send(&v[0], v.size(), MPI_INT, i, WORKTAG, MPI_COMM_WORLD);
+					else
+						MPI_Send(&v[0], v.size(), MPI_INT, i, END_S, MPI_COMM_WORLD);
+				}
+
+				for(int j=start; j < end; j++)
+				{
+					vector<int> v(numCol);
+					for(int k=min; k < max; k++)
+					{
+						v[k-min] = matrixWeight[j][k];
+					}
+
+					if(j != end-1)
+						MPI_Send(&v[0], v.size(), MPI_INT, i, WORKTAG, MPI_COMM_WORLD);
+					else
+						MPI_Send(&v[0], v.size(), MPI_INT, i, END_S, MPI_COMM_WORLD);
+				}
+
+				for(int j=start; j < end; j++)
+				{
+					vector<int> v(2);
+					v[0] = listRunLen[j][0] - min;
+					v[1] = listRunLen[j][1] - min;
+
+					if(j != end-1)
+						MPI_Send(&v[0], v.size(), MPI_INT, i, WORKTAG, MPI_COMM_WORLD);
+					else
+						MPI_Send(&v[0], v.size(), MPI_INT, i, END_S, MPI_COMM_WORLD);
+
+				}
+
+				MPI_Send(&min, 1, MPI_INT, i, WORKTAG, MPI_COMM_WORLD);
+				MPI_Send(&shape, 1, MPI_INT, i, WORKTAG, MPI_COMM_WORLD);
+			}
+
+			for(int i=size; i < listIndex[block].size(); i++)
+			{
+				int im_free;
+				MPI_Recv(&im_free, 1, MPI_INT, MPI_ANY_SOURCE, 10, MPI_COMM_WORLD, &status);
+
+				int start = listIndex[block][i-1];
+				int end   = listIndex[block][i];
+
+				numRow = end - start;
+				findMinMax(start, end, listRunLen, min, max);
+				numCol = max - min;
+
+				int idx = i-1;
+				MPI_Send(&block, 1, MPI_INT, im_free, WORKTAG, MPI_COMM_WORLD);
+				MPI_Send(&idx, 1, MPI_INT, im_free, WORKTAG, MPI_COMM_WORLD);
+				MPI_Send(&numRow, 1, MPI_INT, im_free, WORKTAG, MPI_COMM_WORLD);
+				MPI_Send(&numCol, 1, MPI_INT, im_free, WORKTAG, MPI_COMM_WORLD);
+
+				for(int j=start; j < end; j++)
+				{
+					vector<int> v(numCol);
+					for(int k=min; k < max; k++)
+					{
+						v[k-min] = matrix[j][k];
+					}
+
+					if(j != end-1)
+						MPI_Send(&v[0], v.size(), MPI_INT, im_free, WORKTAG, MPI_COMM_WORLD);
+					else
+						MPI_Send(&v[0], v.size(), MPI_INT, im_free, END_S, MPI_COMM_WORLD);
+				}
+
+				for(int j=start; j < end; j++)
+				{
+					vector<int> v(numCol);
+					for(int k=min; k < max; k++)
+					{
+						v[k-min] = matrixWeight[j][k];
+					}
+
+					if(j != end-1)
+						MPI_Send(&v[0], v.size(), MPI_INT, im_free, WORKTAG, MPI_COMM_WORLD);
+					else
+						MPI_Send(&v[0], v.size(), MPI_INT, im_free, END_S, MPI_COMM_WORLD);
+				}
+
+				for(int j=start; j < end; j++)
+				{
+					vector<int> v(2);
+					v[0] = listRunLen[j][0] - min;
+					v[1] = listRunLen[j][1] - min;
+
+					if(j != end-1)
+						MPI_Send(&v[0], v.size(), MPI_INT, im_free, WORKTAG, MPI_COMM_WORLD);
+					else
+						MPI_Send(&v[0], v.size(), MPI_INT, im_free, END_S, MPI_COMM_WORLD);
+
+				}
+
+				MPI_Send(&min, 1, MPI_INT, im_free, WORKTAG, MPI_COMM_WORLD);
+				MPI_Send(&shape, 1, MPI_INT, im_free, WORKTAG, MPI_COMM_WORLD);
+			}
+		}
+	
 	}
-	else
-	{
-
-		for(int i=1; i < size; i++)
-		{
-			int start = listIndex[i-1];
-			int end   = listIndex[i];
-
-			numRow = end - start;
-			findMinMax(start, end, listRunLen, min, max);
-			numCol = max - min;
-
-			int idx = i-1;
-			MPI_Send(&idx, 1, MPI_INT, i, WORKTAG, MPI_COMM_WORLD);
-			MPI_Send(&numRow, 1, MPI_INT, i, WORKTAG, MPI_COMM_WORLD);
-			MPI_Send(&numCol, 1, MPI_INT, i, WORKTAG, MPI_COMM_WORLD);
-
-			for(int j=start; j < end; j++)
-			{
-				vector<int> v(numCol);
-				for(int k=min; k < max; k++)
-				{
-					v[k-min] = matrix[j][k];
-				}
-
-				if(j != end-1)
-					MPI_Send(&v[0], v.size(), MPI_INT, i, WORKTAG, MPI_COMM_WORLD);
-				else
-					MPI_Send(&v[0], v.size(), MPI_INT, i, END_S, MPI_COMM_WORLD);
-			}
-
-			for(int j=start; j < end; j++)
-			{
-				vector<int> v(numCol);
-				for(int k=min; k < max; k++)
-				{
-					v[k-min] = matrixWeight[j][k];
-				}
-
-				if(j != end-1)
-					MPI_Send(&v[0], v.size(), MPI_INT, i, WORKTAG, MPI_COMM_WORLD);
-				else
-					MPI_Send(&v[0], v.size(), MPI_INT, i, END_S, MPI_COMM_WORLD);
-			}
-
-			for(int j=start; j < end; j++)
-			{
-				vector<int> v(2);
-				v[0] = listRunLen[j][0] - min;
-				v[1] = listRunLen[j][1] - min;
-
-				if(j != end-1)
-					MPI_Send(&v[0], v.size(), MPI_INT, i, WORKTAG, MPI_COMM_WORLD);
-				else
-					MPI_Send(&v[0], v.size(), MPI_INT, i, END_S, MPI_COMM_WORLD);
-
-			}
-
-			MPI_Send(&min, 1, MPI_INT, i, WORKTAG, MPI_COMM_WORLD);
-			MPI_Send(&shape, 1, MPI_INT, i, WORKTAG, MPI_COMM_WORLD);
-		}
-
-		for(int i=size; i < listIndex.size(); i++)
-		{
-			int im_free;
-			MPI_Recv(&im_free, 1, MPI_INT, MPI_ANY_SOURCE, 10, MPI_COMM_WORLD, &status);
-
-			int start = listIndex[i-1];
-			int end   = listIndex[i];
-
-			numRow = end - start;
-			findMinMax(start, end, listRunLen, min, max);
-			numCol = max - min;
-
-			int idx = i-1;
-			MPI_Send(&idx, 1, MPI_INT, im_free, WORKTAG, MPI_COMM_WORLD);
-			MPI_Send(&numRow, 1, MPI_INT, im_free, WORKTAG, MPI_COMM_WORLD);
-			MPI_Send(&numCol, 1, MPI_INT, im_free, WORKTAG, MPI_COMM_WORLD);
-
-			for(int j=start; j < end; j++)
-			{
-				vector<int> v(numCol);
-				for(int k=min; k < max; k++)
-				{
-					v[k-min] = matrix[j][k];
-				}
-
-				if(j != end-1)
-					MPI_Send(&v[0], v.size(), MPI_INT, im_free, WORKTAG, MPI_COMM_WORLD);
-				else
-					MPI_Send(&v[0], v.size(), MPI_INT, im_free, END_S, MPI_COMM_WORLD);
-			}
-
-			for(int j=start; j < end; j++)
-			{
-				vector<int> v(numCol);
-				for(int k=min; k < max; k++)
-				{
-					v[k-min] = matrixWeight[j][k];
-				}
-
-				if(j != end-1)
-					MPI_Send(&v[0], v.size(), MPI_INT, im_free, WORKTAG, MPI_COMM_WORLD);
-				else
-					MPI_Send(&v[0], v.size(), MPI_INT, im_free, END_S, MPI_COMM_WORLD);
-			}
-
-			for(int j=start; j < end; j++)
-			{
-				vector<int> v(2);
-				v[0] = listRunLen[j][0] - min;
-				v[1] = listRunLen[j][1] - min;
-
-				if(j != end-1)
-					MPI_Send(&v[0], v.size(), MPI_INT, im_free, WORKTAG, MPI_COMM_WORLD);
-				else
-					MPI_Send(&v[0], v.size(), MPI_INT, im_free, END_S, MPI_COMM_WORLD);
-
-			}
-
-			MPI_Send(&min, 1, MPI_INT, im_free, WORKTAG, MPI_COMM_WORLD);
-			MPI_Send(&shape, 1, MPI_INT, im_free, WORKTAG, MPI_COMM_WORLD);
-		}
-	}
-
+	int toKill = -1;
 	for(int i=1; i < size; i++)
 	{
-		int len = -1;
-		MPI_Send(&len, 1, MPI_INT, i, DIETAG, MPI_COMM_WORLD);
+		MPI_Send(&toKill, 1, MPI_INT, i, DIETAG, MPI_COMM_WORLD);
 	}
 }
 
 
 // Slave processes that executes Genetic Algorithms for solving the Haplotype Assembly Problem
-int slave(int rank, string pathOutput, bool verbose, bool saving, string settings)
+int slave(int rank, string pathOutput, bool verbose, bool saving, string settings, bool allHeterozygous)
 {
 	int c = 0;
-	int opt, numRow, numCol, min, max;
+	int block, opt, numRow, numCol, min, max;
 
 	MPI_Status status;
 	while(true)
 	{
-		
-		MPI_Recv(&opt, 1, MPI_INT, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+		MPI_Recv(&block, 1, MPI_INT, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
 		if( status.MPI_TAG )
 			break;
 
+		MPI_Recv(&opt, 1, MPI_INT, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 		MPI_Recv(&numRow, 1, MPI_INT, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 		MPI_Recv(&numCol, 1, MPI_INT, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
@@ -547,8 +786,8 @@ int slave(int rank, string pathOutput, bool verbose, bool saving, string setting
 		MPI_Recv(&min, 1, MPI_INT, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 		MPI_Recv(&max, 1, MPI_INT, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
-		GeneticAlgorithm GA = GeneticAlgorithm(opt, rank, verbose, saving, settings);
-		GA.startGA(pathOutput, matrix, matrixWeight, listRunLen, min, max, opt);
+		GeneticAlgorithm GA = GeneticAlgorithm(block, opt, rank, verbose, saving, settings);
+		GA.startGA(pathOutput, matrix, matrixWeight, listRunLen, min, max, opt, allHeterozygous);
 
 		// GA computation finished		
 		c += 1;
@@ -560,20 +799,22 @@ int slave(int rank, string pathOutput, bool verbose, bool saving, string setting
 int main(int argc, char* argv[])
 {
 
-	string pathInput  = "";
-	string pathOutput = "output";
-	string name       = "haplotypes";
-	int gamma         = 30;
-	bool verbose      = false;
-	bool saving       = false;
-	bool ambiguous    = true;
-	string settings	  = "";
+	string pathInput     = "";
+	string pathOutput    = "output";
+	string name          = "haplotypes";
+	int gamma            = 0;
+	bool verbose         = false;
+	bool saving          = false;
+	bool ambiguous       = true;
+	bool allHeterozygous = false;
+	string settings	     = "";
 	vector<vector<int> > matrix;
+	vector<vector<int> > listIndex;
 
 	int p, value, len;
 	double t1, t2;
 
-	while ((p = getopt (argc, argv, "i:o:n:g:v:s:x:p:")) != -1)
+	while ((p = getopt (argc, argv, "i:o:n:g:v:s:x:p:a:")) != -1)
 	{
 		switch (p)
 		{
@@ -613,7 +854,14 @@ int main(int argc, char* argv[])
 				else
 					ambiguous = false;
 				break;
-			}
+			case 'a':
+				value  = (int) strtod(optarg, NULL);
+				if(value==1)
+					allHeterozygous = true;
+				else
+					allHeterozygous = false;
+				break;
+		}
 	}
 
 	// Initialize the MPI environment
@@ -640,7 +888,8 @@ int main(int argc, char* argv[])
 			cout << " * -n: file name containing the estimated haplotypes (optional, default value " << name << ")" << endl;
 			cout << " * -g: number of reads composing each sub-matrix (optional, default value " << gamma << ")" << endl;
 			cout << " * -v: verbose modality (optional, default value " << 0 << ")" << endl;
-			cout << " * -s: save partitions and fragment matrix (optional, default value " << 1 << ")" << endl;
+			cout << " * -s: save partitions and fragment matrix (optional, default value " << 0 << ")" << endl;
+			// cout << " * -a: traditional all-heterozygous assumption (optional, default value " << 0 << ")" << endl;
 			cout << " * -x: mask ambiguous positions in the output haplotypes with a X (optional, default value " << 1 << ")" << endl;
 			cout << " * -p: path to the file of GA settings" << endl;
 			cout << "************************************************************************************************************************\n";
@@ -669,23 +918,26 @@ int main(int argc, char* argv[])
 		// printing parameters
 		cout << "************************************************************************************************************************\n";
 		cout << "GenHap: Genetic Algorithm for Haplotype Assembly\n" << endl;
-		cout << "* Using " << pathInput  << " as input wif file" << endl;
-		cout << "* Using " << pathOutput << " as output folder" << endl;
-		cout << "* Using " << name       << " as file name containing the estimated haplotypes" << endl;
-		cout << "* Using " << gamma      << " reads for each sub-matrix" << endl;
-
+		cout << " * Using " << pathInput  << " as input wif file" << endl;
+		cout << " * Using " << pathOutput << " as output folder" << endl;
+		cout << " * Using " << name       << " as file name containing the estimated haplotypes" << endl;
 		if(verbose)
-			cout << "* Verbose modality enabled" << endl;
+			cout << " * Verbose modality enabled" << endl;
 		else
-			cout << "* Verbose modality disabled" << endl;
+			cout << " * Verbose modality disabled" << endl;
 		if(saving)
-			cout << "* Saving partitions and fragment matrix" << endl;
+			cout << " * Saving partitions and fragment matrix" << endl;
 		else
-			cout << "* Not saving partitions and fragment matrix" << endl;
+			cout << " * Not saving partitions and fragment matrix" << endl;
+		if(allHeterozygous)
+			cout << " * Enabling traditional all-heterozygous assumption" << endl;
+		else
+			cout << " * Not enabling traditional all-heterozygous assumption" << endl;
 		if(ambiguous)
-			cout << "* Masking ambiguous positions" << endl;
+			cout << " * Masking ambiguous positions" << endl;
 		else
-			cout << "* Not masking ambiguous positions" << endl;
+			cout << " * Not masking ambiguous positions" << endl;
+		cout << endl;
 		
 		//creation output folder
 		string folder1;
@@ -704,34 +956,42 @@ int main(int argc, char* argv[])
 			}
 		}
 
-		folder1 = pathOutput + slash + "output";
-
-		if( !(stat(folder1.c_str(), &sb) == 0 && S_ISDIR(sb.st_mode)))
-		{
-			if (os == 0)
-			{
-				folder1 = "MD " + folder1;
-				int sis = system(folder1.c_str());
-			}
-			else
-			{
-				folder1 = "mkdir " + folder1;
-				int sis = system(folder1.c_str());
-			}
-		}
-
 		vector<vector<int> > matrixWeight;
-		vector<int> listIndex;
 		vector<vector<int> > listRunLen;
 
 		Reader reader;
-		reader.readFromWif(pathInput, pathOutput, gamma, saving, matrix, matrixWeight, listIndex, listRunLen);
-
+		reader.readFromWif(pathInput, pathOutput, gamma, saving, matrix, matrixWeight, listIndex, listRunLen, verbose);
 		len = listIndex.size()-1;
 
-		cout << "* Number of reads: " << matrix.size() << endl;
-		cout << "* Number of columns:  " << matrix[0].size() << endl;
-		cout << "* Start " << listIndex.size()-1 << " optimizations" << endl;
+		int numOpt = 0;
+
+		for(int block=0; block < listIndex.size(); block++)
+		{
+
+			folder1 = pathOutput + slash + "block" + to_string(block);
+
+			if( !(stat(folder1.c_str(), &sb) == 0 && S_ISDIR(sb.st_mode)))
+			{
+				if (os == 0)
+				{
+					folder1 = "MD " + folder1;
+					int sis = system(folder1.c_str());
+				}
+				else
+				{
+					folder1 = "mkdir " + folder1;
+					int sis = system(folder1.c_str());
+				}
+			}
+
+			numOpt += (listIndex[block].size()-1);
+		}
+
+		// if(verbose)
+		// {
+		cout << "\n * Start " << numOpt << " optimizations" << endl;
+		cout << " * Using " << size << " cores" << endl;
+		// }
 		cout << "************************************************************************************************************************\n";
 		
 		master(matrix, matrixWeight, listRunLen, listIndex, size);
@@ -739,15 +999,19 @@ int main(int argc, char* argv[])
 	}
 	else
 	{
-		int c = slave(rank, pathOutput, verbose, saving, settings);
+		int c = slave(rank, pathOutput, verbose, saving, settings, allHeterozygous);
 	}
 
 	MPI_Barrier(MPI_COMM_WORLD);
 
 	if(rank == 0)
-	{	
+	{
 
-		saveHaplotypes(pathOutput, name, len, matrix, ambiguous);
+		for(int block=0; block < listIndex.size(); block++) 
+		{
+			saveHaplotypes(pathOutput, name, listIndex[block].size()-1, matrix, ambiguous, block, allHeterozygous);
+		}
+		
 		t2 = MPI_Wtime();
 		double elapsed = t2-t1;
 

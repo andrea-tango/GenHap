@@ -176,6 +176,7 @@ void Chromosome::calculate_n0_n1(vector<vector<int> > &C, vector<vector<int> > &
 	for(int i=0; i < m; i++)
 	{
 		for(int j=0; j < listIndex[indexC[i]][1]; j++)
+		// for(int j=listIndex[indexC[i]][0]; j < listIndex[indexC[i]][1]; j++)
 		{
 			if(C[i][j] == 0)
 			{
@@ -185,7 +186,12 @@ void Chromosome::calculate_n0_n1(vector<vector<int> > &C, vector<vector<int> > &
 			else
 			{
 				idx = indexC[i];
-				N1[j] += M_weight[idx][j];		
+				N1[j] += M_weight[idx][j];
+				// if(C[i][j] == 1)
+				// {
+				// 	idx = indexC[i];
+				// 	N1[j] += M_weight[idx][j];
+				// }	
 			}
 		}
 	}

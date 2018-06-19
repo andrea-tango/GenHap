@@ -12,7 +12,7 @@
 	const int os = 1;
 #endif
 
-GeneticAlgorithm::GeneticAlgorithm(int num_opt, int rank, bool verboseIn, bool savingIn, string settingsIn):verbose(verboseIn), saving(savingIn), settings(settingsIn)
+GeneticAlgorithm::GeneticAlgorithm(int blockIn, int num_opt, int rank, bool verboseIn, bool savingIn, string settingsIn):block(blockIn), verbose(verboseIn), saving(savingIn), settings(settingsIn)
 {
 	if(verbose)
 		cout << "* Start optimization n. " << num_opt <<  " on rank: " << rank << "\n";
@@ -115,7 +115,7 @@ void GeneticAlgorithm::readParameters()
 }
 
 void GeneticAlgorithm::startGA(string pathOutput, vector<vector<int> > &MIn, vector<vector<int> > &M_weightIn,
-		vector<vector<int> > &listIndexIn, int minimo, int massimo, int num_opt)
+		vector<vector<int> > &listIndexIn, int minimo, int massimo, int num_opt, bool allHeterozygous)
 {
 
 	readParameters();
@@ -124,7 +124,7 @@ void GeneticAlgorithm::startGA(string pathOutput, vector<vector<int> > &MIn, vec
 	listIndex = listIndexIn;
 	FILE * fl;
 
-	string folder1 = pathOutput + slash + "output" + slash + "optimization" + to_string(num_opt);
+	string folder1 = pathOutput + slash + "block" + to_string(block) + slash + "optimization" + to_string(num_opt);
 	struct stat sb;
 	if( !(stat(folder1.c_str(), &sb) == 0 && S_ISDIR(sb.st_mode)))
 	{
@@ -140,9 +140,9 @@ void GeneticAlgorithm::startGA(string pathOutput, vector<vector<int> > &MIn, vec
 		}
 	}
 
-	OUTPUT_NAME_INFO = pathOutput + slash + "output" + slash + "optimization" + to_string(num_opt) + slash + "informations";
-	OUTPUT_NAME_FIT  = pathOutput + slash + "output" + slash + "optimization" + to_string(num_opt) + slash + "fitness";
-	OUTPUT_NAME_HAP  = pathOutput + slash + "output" + slash + "optimization" + to_string(num_opt) + slash;
+	OUTPUT_NAME_INFO = pathOutput + slash + "block" + to_string(block) + slash + "optimization" + to_string(num_opt) + slash + "informations";
+	OUTPUT_NAME_FIT  = pathOutput + slash + "block" + to_string(block) + slash + "optimization" + to_string(num_opt) + slash + "fitness";
+	OUTPUT_NAME_HAP  = pathOutput + slash + "block" + to_string(block) + slash + "optimization" + to_string(num_opt) + slash;
 
 // ********************************* Writing Genetic Algorithm settings *********************************
 	
@@ -254,17 +254,31 @@ void GeneticAlgorithm::startGA(string pathOutput, vector<vector<int> > &MIn, vec
 		fclose(fl);
 	}
 
-	string path = OUTPUT_NAME_HAP + slash + "haplotypes";
-	fl=fopen(path.c_str(), "w");
-
-	if( fl==NULL )
-	{
-		printf("Error open output file: %s\n", OUTPUT_NAME_INFO.c_str());
-		exit(-9);
-	}
-
 	vector<int> h1 = best.getH1();
 	vector<int> h2 = best.getH2();
+
+	for(int j=0; j < h1.size(); j++)
+	{
+		if(h1[j]!=-1 && h2[j]==-1)
+		{
+			// h2[j] = h1[j];
+			if(h1[j]==1)
+				h2[j] = 0;
+			else
+				h2[j] = 1;
+		}
+		else
+		{
+			if(h2[j]!=-1 && h1[j]==-1)
+			{
+				// h1[j] = h2[j];
+				if(h2[j]==1)
+					h1[j] = 0;
+				else
+					h1[j] = 1;
+			}
+		}
+	}
 
 	for(int j=0; j < h1.size(); j++)
 	{
@@ -408,6 +422,156 @@ void GeneticAlgorithm::startGA(string pathOutput, vector<vector<int> > &MIn, vec
 		}
 	}
 
+
+	if(allHeterozygous)
+	{
+		string path = OUTPUT_NAME_HAP + slash + "homozygousSites";
+		fl=fopen(path.c_str(), "w");
+
+		if( fl==NULL )
+		{
+			printf("Error open output file: %s\n", OUTPUT_NAME_INFO.c_str());
+			exit(-9);
+		}
+
+		for(int j=0; j < h1.size(); j++)
+		{
+			if(h1[j]==0 && h2[j]==0)
+			{
+				int valueH1 = 0;
+				int valueH2 = 0;
+				int numH1  = 0;
+				int numH2  = 0;
+				int numH1w = 0;
+				int numH2w = 0;
+				for(int i=0; i < C1.size(); i++)
+				{
+					if(C1[i][j] == 0)
+					{
+						indexC1 = best.getIndexC1();
+						int idx = indexC1[i];
+						numH1w += M_weight[idx][j];
+						numH1  += M[idx][j];
+					}
+				}
+				for(int i=0; i < C2.size(); i++)
+				{
+					if(C2[i][j] == 0)
+					{
+						indexC2 = best.getIndexC2();
+						int idx = indexC2[i];
+						numH2w += M_weight[idx][j];
+						numH2  += M[idx][j];
+					}
+				}
+				if(numH1w > numH2w)
+				{
+					valueH1 = 0;
+					valueH2 = 1;
+				}
+				else
+				{
+					if(numH2w > numH1w)
+					{
+						valueH1 = 1;
+						valueH2 = 0;
+					}
+					else
+					{
+						if(numH1 > numH2)
+						{	
+							valueH1 = 0;
+							valueH2 = 1;
+						}
+						else
+						{
+							if(numH2 > numH1)
+							{
+								valueH1 = 1;
+								valueH2 = 0;
+							}
+						}
+					}
+				}
+				if(!(valueH1==0 && valueH2==0))
+					fprintf(fl, "%d %d %d\n", minimo+j, valueH1, valueH2);
+			}
+			else
+			{
+				if(h1[j]==1 && h2[j]==1)
+				{
+					int valueH1 = 0;
+					int valueH2 = 0;
+					int numH1  = 0;
+					int numH2  = 0;
+					int numH1w = 0;
+					int numH2w = 0;
+					for(int i=0; i < C1.size(); i++)
+					{
+						if(C1[i][j] == 1)
+						{
+							indexC1 = best.getIndexC1();
+							int idx = indexC1[i];
+							numH1w += M_weight[idx][j];
+							numH1  += M[idx][j];
+						}
+					}
+					for(int i=0; i < C2.size(); i++)
+					{
+						if(C2[i][j] == 1)
+						{
+							indexC2 = best.getIndexC2();
+							int idx = indexC2[i];
+							numH2w += M_weight[idx][j];
+							numH2  += M[idx][j];
+						}
+					}
+					if(numH1w > numH2w)
+					{
+						valueH1 = 1;
+						valueH2 = 0;
+					}
+					else
+					{
+						if(numH2w > numH1w)
+						{
+							valueH1 = 0;
+							valueH2 = 1;
+						}
+						else
+						{
+							if(numH1 > numH2)
+							{
+								valueH1 = 1;
+								valueH2 = 0;
+							}
+							else
+							{
+								if(numH2 > numH1)
+								{
+									valueH1 = 0;
+									valueH2 = 1;
+								}
+							}
+						}
+					}
+					if(!(valueH1==0 && valueH2==0))
+						fprintf(fl, "%d %d %d\n", minimo+j, valueH1, valueH2);
+				}
+			}
+		}
+		fclose(fl);
+	}
+
+	string path = OUTPUT_NAME_HAP + slash + "haplotypes";
+	fl=fopen(path.c_str(), "w");
+
+	if( fl==NULL )
+	{
+		printf("Error open output file: %s\n", OUTPUT_NAME_INFO.c_str());
+		exit(-9);
+	}
+
 	if(C1.size() > 0 & C2.size() > 0)
 	{
 		for(int i=0; i < minimo; i++)
@@ -547,8 +711,8 @@ void GeneticAlgorithm::initialize(vector<Chromosome> &pop, int num_opt, Chromoso
 
 	best = pop[0];
 
-	if(verbose)
-		cout << "Best fitness at generation 0 of optimization n. " << num_opt << " = " << best.getFitness() << "\n";
+	// if(verbose)
+	// 	cout << "Best fitness at generation 0 of optimization n. " << num_opt << " = " << best.getFitness() << "\n";
 
 	FILE * fl;
 	fl=fopen(OUTPUT_NAME_FIT.c_str(), "w");
@@ -625,8 +789,8 @@ void GeneticAlgorithm::evolve(vector<Chromosome> &pop, int num_opt, int elitism,
 
 		if(best.getFitness() == 0.0 or noImprovement)
 		{
-			if(verbose)
-				cout << "Best fitness at generation " << i << " of optimization n. " << num_opt << " = " << best.getFitness() << "\n";
+			// if(verbose)
+			// 	cout << "Best fitness at generation " << i << " of optimization n. " << num_opt << " = " << best.getFitness() << "\n";
 			
 			break;
 		}
@@ -797,11 +961,11 @@ void GeneticAlgorithm::evolve(vector<Chromosome> &pop, int num_opt, int elitism,
 			flippa = false;
 		}
 
-		if(verbose)
-			cout << "Best fitness at generation " << i << " of optimization n. " << num_opt << " = " << best.getFitness() << "\n";
+		// if(verbose)
+		// 	cout << "Best fitness at generation " << i << " of optimization n. " << num_opt << " = " << best.getFitness() << "\n";
 
-		if(verbose & (i == GENERATIONS - 1))
-			cout << "Best fitness at last generation of optimization n. " << num_opt << " = " << best.getFitness() << "\n";
+		// if(verbose & (i == GENERATIONS - 1))
+		// 	cout << "Best fitness at last generation of optimization n. " << num_opt << " = " << best.getFitness() << "\n";
 	
 		fl=fopen(OUTPUT_NAME_FIT.c_str(), "a");
 

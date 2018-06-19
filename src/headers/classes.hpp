@@ -38,11 +38,7 @@ public:
 	vector<int> getH1() const;
 	vector<int> getH2() const;
 
-	int getNum0() const;
-	int getNum1() const;
-
 	void calculateFitness(vector<vector<int> > &M, vector<vector<int> > &M_weight, vector<vector<int> > &listIndex);
-
 
 	vector<Gene> genes;
 	
@@ -81,9 +77,9 @@ public:
 class GeneticAlgorithm
 {
 public:
-	GeneticAlgorithm(int num_opt, int rank, bool verboseIn, bool savingIn, string settingsIn);
+	GeneticAlgorithm(int blockIn, int num_opt, int rank, bool verboseIn, bool savingIn, string settingsIn);
 	void startGA(string pathOutput, vector<vector<int> > &MIn, vector<vector<int> > &M_weightIn,
-		vector<vector<int> > &listIndexIn, int min, int max, int num_opt);
+		vector<vector<int> > &listIndexIn, int min, int max, int num_opt, bool heterozygous);
 
 	void evolve(vector<Chromosome> &pop, int num_opt, int elitism, string method, int numberInd, Chromosome &best);
 
@@ -94,6 +90,7 @@ private:
 	void readParameters();
 	bool verbose;
 	bool saving;
+	int block;
 	string OUTPUT_NAME_FIT;
 	string OUTPUT_NAME_INFO;
 	string OUTPUT_NAME_HAP;
@@ -122,7 +119,13 @@ public:
 
 	void readFromWif(string pathIn, string pathOut, int gamma, bool saveMatrix,
 				vector<vector<int> > &matrixIn, vector<vector<int> > &matrixWeightIn,
-				vector<int> &listIndexIn, vector<vector<int> > &listRunLenIn);
+				vector<vector<int> > &listIndexIn, vector<vector<int> > &listRunLenIn,
+				bool verbose);
+
+private:
+
+	int get_first(vector<int> &row);
+	int get_last(vector<int> &row);
 };
 
 
