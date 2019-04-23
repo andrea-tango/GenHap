@@ -17,12 +17,12 @@ GenHap can efficiently solve large instances of the wMEC problem, yielding optim
 
 A detailed description of GenHap, as well as a complete experimental comparison with an efficient state-of-the-art algorithm for haplotype phasing by using the dataset described below ([Data](#data)), can be found in:
 
-Tangherloni A., Spolaor S., Rundo L., Nobile M.S., Cazzaniga P., Mauri G., Liò P., Merelli I., and Besozzi D.: "GenHap: a novel computational method based on genetic algorithms for haplotype assembly", BMC Bioinformatics, 20(4), 172, 2019. doi: 10.1186/s12859-019-2691-y
+- Tangherloni A., Spolaor S., Rundo L., Nobile M.S., Cazzaniga P., Mauri G., Liò P., Merelli I., and Besozzi D.: "GenHap: a novel computational method based on genetic algorithms for haplotype assembly", BMC Bioinformatics, 20(4), 172, 2019. doi: 10.1186/s12859-019-2691-y
 
 
 An in-depth computational analysis of GenHap as well as a complete review of haplotyping approaches can be found in:
 
-Tangherloni A., Rundo L., Spolaor S., Nobile M.S., Merelli I., Besozzi D., Mauri G., Cazzaniga P., Liò P.: "High Performance Computing for Haplotyping: Models and Platforms", in Euro-Par 2018: Parallel Processing Workshops, LNCS, 11339, pp. 650-661, Springer, 2018. doi: 10.1007/978-3-030-10549-5_51
+- Tangherloni A., Rundo L., Spolaor S., Nobile M.S., Merelli I., Besozzi D., Mauri G., Cazzaniga P., Liò P.: "High Performance Computing for Haplotyping: Models and Platforms", in Euro-Par 2018: Parallel Processing Workshops, LNCS, 11339, pp. 650-661, Springer, 2018. doi: 10.1007/978-3-030-10549-5_51
 
 ## <a name="comp"></a>Compilation ##
 
